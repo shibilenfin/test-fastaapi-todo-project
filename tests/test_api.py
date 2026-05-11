@@ -1,5 +1,8 @@
 from fastapi.testclient import TestClient
+from unittest.mock import AsyncMock
+from app.api.routes.todos import get_todo_service
 from app.main import app
+from app.schemas.todo import TodoResponse
 
 client = TestClient(app)
 
@@ -30,7 +33,39 @@ def test_get_todo_not_found():
     assert response.status_code == 404
     assert "Todo not found" in response.json()["detail"]
 
-def test_update_todo():
+
+def test_get_pending_todos_empty():
+    mock_service = AsyncMock()
+    mock_service.get_pending.return_value = []
+    app.dependency_overrides[get_todo_service] = lambda: mock_service
+
+    response = client.get("/todos/pending")
+    assert response.status_code == 200
+    assert response.json() == []
+
+    app.dependency_overrides.clear()
+
+
+def test_get_pending_todos():
+    mock_service = AsyncMock()
+    mock_service.get_pending.return_value = [
+        TodoResponse(id=1, title="Pending Todo", description="Desc", completed=False)
+    ]
+    app.dependency_overrides[get_todo_service] = lambda: mock_service
+
+    response = client.get("/todos/pending?skip=0&limit=10")
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "id": 1,
+            "title": "Pending Todo",
+            "description": "Desc",
+            "completed": False,
+        }
+    ]
+    mock_service.get_pending.assert_awaited_once_with(skip=0, limit=10)
+
+    app.dependency_overrides.clear()
     # Create first
     create_response = client.post("/todos", json={"title": "Test", "description": "Desc"})
     todo_id = create_response.json()["id"]

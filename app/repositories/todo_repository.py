@@ -23,8 +23,21 @@ class TodoRepository:
         result = await self.session.execute(select(Todo).where(Todo.id == todo_id))
         return result.scalar_one_or_none()
 
-    async def get_pending(self) -> List[Todo]:
-        result = await self.session.execute(select(Todo).where(Todo.completed == False))
+    async def get_pending(self, skip: int = 0, limit: int = 100) -> List[Todo]:
+        if skip < 0:
+            skip = 0
+        if limit < 1:
+            limit = 1
+        max_limit = 100
+        limit = min(limit, max_limit)
+
+        result = await self.session.execute(
+            select(Todo)
+            .where(Todo.completed.is_(False))
+            .order_by(Todo.id)
+            .offset(skip)
+            .limit(limit)
+        )
         return result.scalars().all()
 
     async def update(self, todo_id: int, title: str | None, description: str | None, completed: bool | None) -> Todo | None:

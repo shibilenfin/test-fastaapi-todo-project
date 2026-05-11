@@ -41,6 +41,19 @@ async def test_get_all_todos():
 
 
 @pytest.mark.asyncio
+async def test_get_pending_todos():
+    mock_repo = AsyncMock()
+    mock_repo.get_pending.return_value = [
+        Todo(id=1, title="Pending1", description=None, completed=False)
+    ]
+    service = TodoService(mock_repo)
+    result = await service.get_pending(skip=5, limit=10)
+    assert len(result) == 1
+    assert result[0].title == "Pending1"
+    mock_repo.get_pending.assert_awaited_once_with(skip=5, limit=10)
+
+
+@pytest.mark.asyncio
 async def test_get_todo_by_id():
     mock_repo = AsyncMock()
     mock_repo.get_by_id.return_value = Todo(id=1, title="Test", description="Desc", completed=False)

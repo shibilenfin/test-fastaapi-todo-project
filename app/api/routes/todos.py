@@ -21,11 +21,12 @@ async def create_todo(todo_data: TodoCreate, service: TodoService = Depends(get_
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/todos/pending", response_model=List[TodoResponse])
-async def get_pending_todos(service: TodoService = Depends(get_todo_service)):
-    todos = await service.get_pending()
-    if not todos:
-        raise HTTPException(status_code=404, detail="No pending todos found")
-    return todos
+async def get_pending_todos(
+    skip: int = 0,
+    limit: int = 100,
+    service: TodoService = Depends(get_todo_service),
+):
+    return await service.get_pending(skip=skip, limit=limit)
 
 @router.get("/todos", response_model=List[TodoResponse])
 async def get_todos(service: TodoService = Depends(get_todo_service)):

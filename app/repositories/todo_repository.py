@@ -1,6 +1,7 @@
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
+from ..constants import DEFAULT_PAGE_SKIP, DEFAULT_PAGE_LIMIT
 from ..models import Todo
 
 
@@ -23,14 +24,7 @@ class TodoRepository:
         result = await self.session.execute(select(Todo).where(Todo.id == todo_id))
         return result.scalar_one_or_none()
 
-    async def get_pending(self, skip: int = 0, limit: int = 100) -> List[Todo]:
-        if skip < 0:
-            skip = 0
-        if limit < 1:
-            limit = 1
-        max_limit = 100
-        limit = min(limit, max_limit)
-
+    async def get_pending(self, skip: int = DEFAULT_PAGE_SKIP, limit: int = DEFAULT_PAGE_LIMIT) -> List[Todo]:
         result = await self.session.execute(
             select(Todo)
             .where(Todo.completed.is_(False))

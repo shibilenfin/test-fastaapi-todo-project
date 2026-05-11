@@ -1,4 +1,5 @@
 from typing import List
+from ..constants import DEFAULT_PAGE_SKIP, DEFAULT_PAGE_LIMIT, PAGE_LIMIT_MAX
 from ..repositories.todo_repository import TodoRepository
 from ..schemas.todo import TodoCreate, TodoUpdate, TodoResponse
 
@@ -17,7 +18,9 @@ class TodoService:
         todos = await self.repository.get_all()
         return [TodoResponse.from_orm(todo) for todo in todos]
 
-    async def get_pending(self, skip: int = 0, limit: int = 100) -> List[TodoResponse]:
+    async def get_pending(self, skip: int = DEFAULT_PAGE_SKIP, limit: int = DEFAULT_PAGE_LIMIT) -> List[TodoResponse]:
+        skip = max(skip, DEFAULT_PAGE_SKIP)
+        limit = max(1, min(limit, PAGE_LIMIT_MAX))
         todos = await self.repository.get_pending(skip=skip, limit=limit)
         return [TodoResponse.from_orm(todo) for todo in todos]
 

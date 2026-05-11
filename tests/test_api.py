@@ -66,6 +66,14 @@ def test_get_pending_todos():
     mock_service.get_pending.assert_awaited_once_with(skip=0, limit=10)
 
     app.dependency_overrides.clear()
+
+
+def test_get_pending_todos_invalid_query():
+    response = client.get("/todos/pending?skip=-1&limit=0")
+    assert response.status_code == 422
+
+
+def test_update_todo():
     # Create first
     create_response = client.post("/todos", json={"title": "Test", "description": "Desc"})
     todo_id = create_response.json()["id"]

@@ -1,14 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
+from ...constants import DEFAULT_PAGE_SKIP, DEFAULT_PAGE_LIMIT, PAGE_LIMIT_MAX
 from ...database import get_db
 from ...repositories.todo_repository import TodoRepository
 from ...services.todo_service import TodoService
 from ...schemas.todo import TodoCreate, TodoUpdate, TodoResponse
 
 router = APIRouter()
-
-
 def get_todo_service(session: AsyncSession = Depends(get_db)) -> TodoService:
     repository = TodoRepository(session)
     return TodoService(repository)
@@ -22,11 +21,14 @@ async def create_todo(todo_data: TodoCreate, service: TodoService = Depends(get_
 
 @router.get("/todos/pending", response_model=List[TodoResponse])
 async def get_pending_todos(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(default=DEFAULT_PAGE_SKIP, ge=0),
+    limit: int = Query(default=DEFAULT_PAGE_LIMIT, ge=1, le=PAGE_LIMIT_MAX),
     service: TodoService = Depends(get_todo_service),
 ):
-    return await service.get_pending(skip=skip, limit=limit)
+    try:
+        return await service.get_pending(skip=skip, limit=limit)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/todos", response_model=List[TodoResponse])
 async def get_todos(service: TodoService = Depends(get_todo_service)):

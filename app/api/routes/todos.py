@@ -1,26 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from ...database import get_db
-from ...models.todo import Todo
 from ...repositories.todo_repository import TodoRepository
 from ...services.todo_service import TodoService
 from ...schemas.todo import TodoCreate, TodoUpdate, TodoResponse
 
 router = APIRouter()
-
-async def query_pending_todos(session: AsyncSession) -> List[Todo]:
-    result = await session.execute(select(Todo).where(Todo.completed == False))
-    return result.scalars().all()
-
-@router.get("/todos/pending", response_model=List[TodoResponse])
-async def get_pending_todos_direct(session: AsyncSession = Depends(get_db)):
-    todos = await query_pending_todos(session)
-    if not todos:
-        raise HTTPException(status_code=404, detail="No pending todos found")
-    return todos
-
 
 
 def get_todo_service(session: AsyncSession = Depends(get_db)) -> TodoService:
@@ -33,6 +19,13 @@ async def create_todo(todo_data: TodoCreate, service: TodoService = Depends(get_
         return await service.create(todo_data)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/todos/pending", response_model=List[TodoResponse])
+async def get_pending_todos(service: TodoService = Depends(get_todo_service)):
+    todos = await service.get_pending()
+    if not todos:
+        raise HTTPException(status_code=404, detail="No pending todos found")
+    return todos
 
 @router.get("/todos", response_model=List[TodoResponse])
 async def get_todos(service: TodoService = Depends(get_todo_service)):

@@ -23,6 +23,10 @@ class TodoRepository:
         result = await self.session.execute(select(Todo).where(Todo.id == todo_id))
         return result.scalar_one_or_none()
 
+    async def get_pending(self) -> List[Todo]:
+        result = await self.session.execute(select(Todo).where(Todo.completed == False))
+        return result.scalars().all()
+
     async def update(self, todo_id: int, title: str | None, description: str | None, completed: bool | None) -> Todo | None:
         todo = await self.get_by_id(todo_id)
         if not todo:

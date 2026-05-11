@@ -17,6 +17,10 @@ class TodoService:
         todos = await self.repository.get_all()
         return [TodoResponse.from_orm(todo) for todo in todos]
 
+    async def get_pending(self) -> List[TodoResponse]:
+        todos = await self.repository.get_pending()
+        return [TodoResponse.from_orm(todo) for todo in todos]
+
     async def get_by_id(self, todo_id: int) -> TodoResponse | None:
         todo = await self.repository.get_by_id(todo_id)
         return TodoResponse.from_orm(todo) if todo else None

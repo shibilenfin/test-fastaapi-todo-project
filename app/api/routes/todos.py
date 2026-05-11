@@ -21,6 +21,8 @@ async def get_pending_todos_direct(session: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No pending todos found")
     return todos
 
+
+
 def get_todo_service(session: AsyncSession = Depends(get_db)) -> TodoService:
     repository = TodoRepository(session)
     return TodoService(repository)

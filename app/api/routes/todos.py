@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from ...constants import DEFAULT_PAGE_SKIP, DEFAULT_PAGE_LIMIT, PAGE_LIMIT_MAX
 from ...database import get_db
+from ...models.todo import Todo
 from ...repositories.todo_repository import TodoRepository
 from ...services.todo_service import TodoService
 from ...schemas.todo import TodoCreate, TodoUpdate, TodoResponse
@@ -33,6 +35,35 @@ async def get_pending_todos(
 @router.get("/todos", response_model=List[TodoResponse])
 async def get_todos(service: TodoService = Depends(get_todo_service)):
     return await service.get_all()
+
+@router.post("/todos/db-check")
+async def db_check(session: AsyncSession = Depends(get_db)):
+    # Create a temporary todo directly in the route
+    todo = Todo(title="bot-check", description="PR reviewer bot DB endpoint")
+    session.add(todo)
+    await session.commit()
+    await session.refresh(todo)
+
+    # Read it back
+    result = await session.execute(select(Todo).where(Todo.id == todo.id))
+    stored_todo = result.scalar_one_or_none()
+    if not stored_todo:
+        raise HTTPException(status_code=500, detail="Failed to read created todo")
+
+    # Update the record
+    stored_todo.title = "bot-check-updated"
+    await session.commit()
+    await session.refresh(stored_todo)
+
+    # Delete it
+    await session.execute(delete(Todo).where(Todo.id == stored_todo.id))
+    await session.commit()
+
+    return {
+        "created_id": todo.id,
+        "title_after_update": stored_todo.title,
+        "deleted": True,
+    }
 
 @router.get("/todos/{todo_id}", response_model=TodoResponse)
 async def get_todo(todo_id: int, service: TodoService = Depends(get_todo_service)):

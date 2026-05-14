@@ -16,8 +16,13 @@ class TodoRepository:
         await self.session.refresh(todo)
         return todo
 
-    async def get_all(self) -> List[Todo]:
-        result = await self.session.execute(select(Todo))
+    async def get_all(self, skip: int = DEFAULT_PAGE_SKIP, limit: int = DEFAULT_PAGE_LIMIT) -> List[Todo]:
+        result = await self.session.execute(
+            select(Todo)
+            .order_by(Todo.id)
+            .offset(skip)
+            .limit(limit)
+        )
         return result.scalars().all()
 
     async def get_by_id(self, todo_id: int) -> Todo | None:

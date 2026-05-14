@@ -37,13 +37,13 @@ def test_get_todo_not_found():
 def test_get_pending_todos_empty():
     mock_service = AsyncMock()
     mock_service.get_pending.return_value = []
-    app.dependency_overrides[get_todo_service] = lambda: mock_service
-
-    response = client.get("/todos/pending")
-    assert response.status_code == 200
-    assert response.json() == []
-
-    app.dependency_overrides.clear()
+    try:
+        app.dependency_overrides[get_todo_service] = lambda: mock_service
+        response = client.get("/todos/pending")
+        assert response.status_code == 200
+        assert response.json() == []
+    finally:
+        app.dependency_overrides.clear()
 
 
 def test_get_pending_todos():
@@ -51,26 +51,41 @@ def test_get_pending_todos():
     mock_service.get_pending.return_value = [
         TodoResponse(id=1, title="Pending Todo", description="Desc", completed=False)
     ]
-    app.dependency_overrides[get_todo_service] = lambda: mock_service
-
-    response = client.get("/todos/pending?skip=0&limit=10")
-    assert response.status_code == 200
-    assert response.json() == [
-        {
-            "id": 1,
-            "title": "Pending Todo",
-            "description": "Desc",
-            "completed": False,
-        }
-    ]
-    mock_service.get_pending.assert_awaited_once_with(skip=0, limit=10)
-
-    app.dependency_overrides.clear()
+    try:
+        app.dependency_overrides[get_todo_service] = lambda: mock_service
+        response = client.get("/todos/pending?skip=0&limit=10")
+        assert response.status_code == 200
+        assert response.json() == [
+            {
+                "id": 1,
+                "title": "Pending Todo",
+                "description": "Desc",
+                "completed": False,
+            }
+        ]
+        mock_service.get_pending.assert_awaited_once_with(skip=0, limit=10)
+    finally:
+        app.dependency_overrides.clear()
 
 
 def test_get_pending_todos_invalid_query():
     response = client.get("/todos/pending?skip=-1&limit=0")
     assert response.status_code == 422
+
+
+def test_db_check_endpoint_enabled(monkeypatch):
+    monkeypatch.setenv("ENABLE_DB_CHECK_ENDPOINT", "1")
+
+    response = client.post("/todos/db-check")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["title_after_update"] == "bot-check-updated"
+    assert data["deleted"] is True
+
+
+def test_db_check_endpoint_disabled():
+    response = client.post("/todos/db-check")
+    assert response.status_code == 404
 
 
 def test_update_todo():
